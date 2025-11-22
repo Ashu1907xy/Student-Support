@@ -1,1 +1,3 @@
 # Student-Support
+This project is based on easy to provide hand written notes , previous paper , lost item post etc... 
+Author - Ashu Gupta
