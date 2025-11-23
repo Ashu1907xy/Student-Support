@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "647080805867",
+    "project_id": "collagemajorprojects",
+    "storage_bucket": "collagemajorprojects.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:647080805867:android:0d2a6414554ee05608c5ae",
+        "android_client_info": {
+          "package_name": "com.example.collagemajorproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBx1Pg1liFbKslwEJkOwutH2Bs4D0qh8-c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
