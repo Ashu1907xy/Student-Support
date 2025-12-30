@@ -70,8 +70,6 @@ fun PickMeScreen(
 
     ) {
     val getAllLostItemState = viewModel.getAllLostItemState.collectAsState()
-    var userData by remember { mutableStateOf<ProfileData?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
     val auth = FirebaseAuth.getInstance()
     val database = FirebaseDatabase.getInstance().getReference("users")
     val userId = auth.currentUser?.uid
@@ -301,9 +299,8 @@ fun PickMeScreen(
                             data.title,
                             data.contactInfo,
                             data.id,
-                            data.imageUrl
-
-
+                            data.imageUrl,
+                            data.userImageBase64
                             )
 
                     }
@@ -329,6 +326,7 @@ fun Eacha(
     contactInfo: String,
     id: String,
     imageUrl: String,
+    userImageBase64 : String
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showLikeAnimation by remember { mutableStateOf(false) }
@@ -347,6 +345,17 @@ fun Eacha(
         imageUrl?.takeIf { it.isNotEmpty() }?.let { base64s ->
             try {
                 val bytes = Base64.decode(base64s, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    val decodedBitmapUser = remember(userImageBase64) {
+        userImageBase64?.takeIf { it.isNotEmpty() }?.let { base64ss ->
+            try {
+                val bytes = Base64.decode(base64ss, Base64.DEFAULT)
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             } catch (e: Exception) {
                 null
@@ -389,11 +398,23 @@ fun Eacha(
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "avatar placeholder",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    if (decodedBitmapUser != null){
+                        Image(
+                            bitmap = decodedBitmapUser.asImageBitmap(),
+                            contentDescription = "Lost Item Image",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }else{
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "avatar placeholder",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+
+
+
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -541,285 +562,6 @@ fun Eacha(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-/*
-@Composable
-fun Eacha(
-    userName: String,
-    title: String,
-    contactInfo: String,
-    id: String,
-    imageUrl: String,
-
-    ) {
-
-
-    var isLoading by remember { mutableStateOf(true) }
-    val auth = FirebaseAuth.getInstance()
-    val database = FirebaseDatabase.getInstance().getReference("users")
-    val userId = auth.currentUser?.uid
-
-
-    val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
-    var showLikeAnimation by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (showLikeAnimation) 1.5f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        finishedListener = { showLikeAnimation = false }
-    )
-
-    val decodedBitmap = remember(imageUrl) {
-        imageUrl?.takeIf { it.isNotEmpty() }?.let { base64s ->
-            try {
-                val bytes = Base64.decode(base64s , Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            }catch (e: Exception){
-                null
-            }
-        }
-    }
-
-
-
-
-    Card(
-        modifier = Modifier
-            .padding(bottom = 16.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(0.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-
-
-
-
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .border(
-                            width = 2.dp,
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "avatar placeholder",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-
-
-
-
-
-
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-
-                    Text(
-                        text = userName,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.ExtraBold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 1.6f)
-                    )
-
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-
-                        Text(
-                            text = "2 minutes ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 1.6f)
-                        )
-
-                        Text(
-                            text = " • ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Bhopal",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 1.6f)
-                        )
-                    }
-                }
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Delete Post") },
-                            onClick = {
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Report") },
-                            onClick = {
-                                showMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Call") },
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_DIAL).apply {
-                                    data = Uri.parse("tel:${contactInfo}")
-                                }
-                                context.startActivity(intent)
-
-                                showMenu = false
-                            }
-                        )
-                    }
-
-                }
-            }
-
-            //  imaga
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-
-                if (decodedBitmap != null) {
-                    Image(
-                        bitmap = decodedBitmap.asImageBitmap(),
-                        contentDescription = "Profile Picture",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.secondaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Default Profile",
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-                }
-            }
-
-
-
-
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Share"
-                        )
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Comment,
-                            contentDescription = "Comment"
-                        )
-                    }
-                    IconButton(onClick = { }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share"
-                        )
-                    }
-
-
-                }
-            }
-        }
-
-        Text(
-            text = buildAnnotatedString {
-                withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) {
-                    append(userName)
-                }
-                append(": " + title)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-    }
-
-}
-
- */
-
 
 data class NavItemState(
     val title: String,

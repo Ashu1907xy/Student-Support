@@ -83,6 +83,1049 @@ import java.io.File
 import java.io.FileOutputStream
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddLostItemScreen(
+    viewModel: TimeTableViewModel = hiltViewModel(),
+    onSuccess: () -> Unit = {},
+    navController: NavController
+) {
+    val auth = FirebaseAuth.getInstance()
+    val database = FirebaseDatabase.getInstance().getReference("users")
+    val userId = auth.currentUser?.uid
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val addState = viewModel.addPost.collectAsState().value
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+    var userData by remember { mutableStateOf<ProfileData?>(null) }
+    var isLoadingUser by remember { mutableStateOf(true) }
+    var title by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // ✅ MODERN COLOR PALETTE
+    val primaryGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))
+    )
+    val accentGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFf093fb), Color(0xFFf5576c))
+    )
+    val successGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF4facfe), Color(0xFF00f2fe))
+    )
+
+    // ✅ ADD SCAFFOLD
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Add Lost Item") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF667eea),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        }
+    ) { paddingValues ->
+
+        // Fetch user data
+        LaunchedEffect(Unit) {
+            if (userId != null) {
+                database.child(userId).child("ProfileData").get()
+                    .addOnSuccessListener { snapshot ->
+                        userData = snapshot.getValue(ProfileData::class.java)
+                        isLoadingUser = false
+                    }
+                    .addOnFailureListener {
+                        isLoadingUser = false
+                        Toast.makeText(context, "Failed to load user data", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+            } else {
+                isLoadingUser = false
+            }
+        }
+
+        val cLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicturePreview()
+        ) { capturedBitmap ->
+            capturedBitmap?.let {
+                bitmap = it
+                try {
+                    val file =
+                        File(context.cacheDir, "camera_temp_${System.currentTimeMillis()}.jpg")
+                    FileOutputStream(file).use { out ->
+                        it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    }
+                    imageUri = Uri.fromFile(file)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            uri?.let {
+                imageUri = it
+                bitmap = if (Build.VERSION.SDK_INT < 28) {
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                } else {
+                    val source = ImageDecoder.createSource(context.contentResolver, it)
+                    ImageDecoder.decodeBitmap(source)
+                }
+            }
+        }
+
+        // Show loading while fetching user data
+        if (isLoadingUser) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(50.dp),
+                        strokeWidth = 4.dp,
+                        color = Color(0xFF667eea)
+                    )
+                    Text(
+                        "Loading...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFF667eea)
+                    )
+                }
+            }
+            return@Scaffold
+        }
+
+        // ✅ MAIN UI WITH GRADIENT BACKGROUND
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFF5F7FA),
+                            Color(0xFFE8EAF6)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+
+                // ✅ IMAGE PICKER CARD
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp)
+                            .clickable { showDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap?.asImageBitmap()!!,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(20.dp))
+                            )
+
+                            // ✅ EDIT OVERLAY
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp)
+                                    .size(48.dp)
+                                    .background(primaryGradient, CircleShape)
+                                    .clickable { showDialog = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.outline_photo_camera_24),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color(0xFF667eea).copy(alpha = 0.1f),
+                                                    Color(0xFF764ba2).copy(alpha = 0.1f)
+                                                )
+                                            ),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Image,
+                                        contentDescription = "placeholder",
+                                        modifier = Modifier.size(40.dp),
+                                        tint = Color(0xFF667eea)
+                                    )
+                                }
+
+                                Text(
+                                    text = "Tap to add photo",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF667eea),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Text(
+                                    text = "Upload a clear image of the lost item",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ✅ TITLE INPUT FIELD
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Item Title") },
+                    placeholder = { Text("e.g., Lost Blue Backpack") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Assignment,
+                            contentDescription = null,
+                            tint = Color(0xFF667eea)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !addState.isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF667eea),
+                        focusedLabelColor = Color(0xFF667eea),
+                        cursorColor = Color(0xFF667eea),
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // ✅ USER INFO CARD
+                if (userData != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF667eea).copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF667eea)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Posting as",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                                Text(
+                                    text = userData!!.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2D3748)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // ✅ SUBMIT BUTTON WITH GRADIENT
+                Button(
+                    onClick = {
+                        if (title.isBlank()) {
+                            Toast.makeText(context, "Please enter a title", Toast.LENGTH_SHORT)
+                                .show()
+                            return@Button
+                        }
+
+                        if (imageUri == null) {
+                            Toast.makeText(context, "Please select an image", Toast.LENGTH_SHORT)
+                                .show()
+                            return@Button
+                        }
+
+                        if (userId == null) {
+                            Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        val userName = userData?.name ?: "Anonymous"
+                        val contact = userData?.mobile ?: "911"
+                        val userImageBase64 = userData?.imageUrl ?: ""
+
+                        viewModel.addLostItem(
+                            userName = userName,
+                            title = title,
+                            contactInfo = contact,
+                            imageUri = imageUri,
+                            context = context,
+                            userImageBase64 = userImageBase64,
+
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = !addState.isLoading,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        disabledContainerColor = Color.Gray
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(primaryGradient, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (addState.isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 3.dp
+                            )
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                                Text(
+                                    "Post Lost Item",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ✅ IMAGE PICKER DIALOG
+            if (showDialog) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { showDialog = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .clickable(enabled = false) { },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Choose Photo",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2D3748)
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                // Camera Option
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable {
+                                        cLauncher.launch()
+                                        showDialog = false
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .background(primaryGradient, RoundedCornerShape(20.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.outline_photo_camera_24),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(48.dp),
+                                            tint = Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        "Camera",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF2D3748)
+                                    )
+                                }
+
+                                // Gallery Option
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable {
+                                        launcher.launch("image/*")
+                                        showDialog = false
+                                    }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .background(accentGradient, RoundedCornerShape(20.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.outline_gallery_thumbnail_24),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(48.dp),
+                                            tint = Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        "Gallery",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF2D3748)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            TextButton(onClick = { showDialog = false }) {
+                                Text(
+                                    "Cancel",
+                                    color = Color.Gray,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Success Handling
+        LaunchedEffect(addState.success) {
+            if (addState.success == true) {
+                Toast.makeText(context, "✅ Lost item posted successfully!", Toast.LENGTH_SHORT)
+                    .show()
+                title = ""
+                bitmap = null
+                imageUri = null
+                navController.navigate("Pickme") {
+                    popUpTo("Pickme") { inclusive = true }
+                }
+                onSuccess()
+            }
+        }
+
+        // Error Handling
+        LaunchedEffect(addState.error) {
+            addState.error?.let { errorMessage ->
+                Toast.makeText(context, "❌ Error: $errorMessage", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+}
+
+
+
+/*
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddLostItemScreen(
+    viewModel: TimeTableViewModel = hiltViewModel(),
+    onSuccess: () -> Unit = {},
+    navController: NavController
+) {
+    val auth = FirebaseAuth.getInstance()
+    val database = FirebaseDatabase.getInstance().getReference("users")
+    val userId = auth.currentUser?.uid
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val addState = viewModel.addPost.collectAsState().value
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+    var userData by remember { mutableStateOf<ProfileData?>(null) }
+    var isLoadingUser by remember { mutableStateOf(true) }
+    var title by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // ✅ MODERN COLOR PALETTE
+    val primaryGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF667eea), Color(0xFF764ba2))
+    )
+    val accentGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFf093fb), Color(0xFFf5576c))
+    )
+    val successGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF4facfe), Color(0xFF00f2fe))
+    )
+
+    // Fetch user data
+    LaunchedEffect(Unit) {
+        if (userId != null) {
+            database.child(userId).child("ProfileData").get()
+                .addOnSuccessListener { snapshot ->
+                    userData = snapshot.getValue(ProfileData::class.java)
+                    isLoadingUser = false
+                }
+                .addOnFailureListener {
+                    isLoadingUser = false
+                    Toast.makeText(context, "Failed to load user data", Toast.LENGTH_SHORT).show()
+                }
+        } else {
+            isLoadingUser = false
+        }
+    }
+
+    val cLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { capturedBitmap ->
+        capturedBitmap?.let {
+            bitmap = it
+            try {
+                val file = File(context.cacheDir, "camera_temp_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(file).use { out ->
+                    it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
+                imageUri = Uri.fromFile(file)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            imageUri = it
+            bitmap = if (Build.VERSION.SDK_INT < 28) {
+                MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+            } else {
+                val source = ImageDecoder.createSource(context.contentResolver, it)
+                ImageDecoder.decodeBitmap(source)
+            }
+        }
+    }
+
+    // Show loading while fetching user data
+    if (isLoadingUser) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(50.dp),
+                    strokeWidth = 4.dp,
+                    color = Color(0xFF667eea)
+                )
+                Text(
+                    "Loading...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color(0xFF667eea)
+                )
+            }
+        }
+        return
+    }
+
+    // ✅ MAIN UI WITH GRADIENT BACKGROUND
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF5F7FA),
+                        Color(0xFFE8EAF6)
+                    )
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(20.dp)
+        ) {
+            // ✅ HEADER WITH BACK BUTTON
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color(0xFF667eea)
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    text = "Add Lost Item",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2D3748)
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // ✅ IMAGE PICKER CARD
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp)
+                        .clickable { showDialog = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap?.asImageBitmap()!!,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(20.dp))
+                        )
+
+                        // ✅ EDIT OVERLAY
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp)
+                                .size(48.dp)
+                                .background(primaryGradient, CircleShape)
+                                .clickable { showDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_photo_camera_24),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF667eea).copy(alpha = 0.1f),
+                                                Color(0xFF764ba2).copy(alpha = 0.1f)
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "placeholder",
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color(0xFF667eea)
+                                )
+                            }
+
+                            Text(
+                                text = "Tap to add photo",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF667eea),
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Text(
+                                text = "Upload a clear image of the lost item",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ✅ TITLE INPUT FIELD
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Item Title") },
+                placeholder = { Text("e.g., Lost Blue Backpack") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Assignment,
+                        contentDescription = null,
+                        tint = Color(0xFF667eea)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !addState.isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF667eea),
+                    focusedLabelColor = Color(0xFF667eea),
+                    cursorColor = Color(0xFF667eea),
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // ✅ USER INFO CARD
+            if (userData != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF667eea).copy(alpha = 0.1f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color(0xFF667eea)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Posting as",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                            Text(
+                                text = userData!!.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2D3748)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // ✅ SUBMIT BUTTON WITH GRADIENT
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        Toast.makeText(context, "Please enter a title", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    if (imageUri == null) {
+                        Toast.makeText(context, "Please select an image", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    if (userId == null) {
+                        Toast.makeText(context, "User not logged in", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    val userName = userData?.name ?: "Anonymous"
+                    val contact = userData?.mobile ?: "911"
+                    val userImageBase64 = userData?.imageUrl ?: ""
+
+                    viewModel.addLostItem(
+                        userName = userName,
+                        title = title,
+                        contactInfo = contact,
+                        imageUri = imageUri,
+                        context = context,
+                        userImageBase64 = userImageBase64,
+
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                enabled = !addState.isLoading,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent,
+                    disabledContainerColor = Color.Gray
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(primaryGradient, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (addState.isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 3.dp
+                        )
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                            Text(
+                                "Post Lost Item",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ✅ IMAGE PICKER DIALOG
+        if (showDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { showDialog = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .clickable(enabled = false) { },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Choose Photo",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2D3748)
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // Camera Option
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable {
+                                    cLauncher.launch()
+                                    showDialog = false
+                                }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .background(primaryGradient, RoundedCornerShape(20.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.outline_photo_camera_24),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    "Camera",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF2D3748)
+                                )
+                            }
+
+                            // Gallery Option
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable {
+                                    launcher.launch("image/*")
+                                    showDialog = false
+                                }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .background(accentGradient, RoundedCornerShape(20.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.outline_gallery_thumbnail_24),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    "Gallery",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF2D3748)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        TextButton(onClick = { showDialog = false }) {
+                            Text(
+                                "Cancel",
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Success Handling
+    LaunchedEffect(addState.success) {
+        if (addState.success == true) {
+            Toast.makeText(context, "✅ Lost item posted successfully!", Toast.LENGTH_SHORT).show()
+            title = ""
+            bitmap = null
+            imageUri = null
+            navController.navigate("Pickme") {
+                popUpTo("Pickme") { inclusive = true }
+            }
+            onSuccess()
+        }
+    }
+
+    // Error Handling
+    LaunchedEffect(addState.error) {
+        addState.error?.let { errorMessage ->
+            Toast.makeText(context, "❌ Error: $errorMessage", Toast.LENGTH_LONG).show()
+        }
+    }
+}
+
+
+ */
+
+
+
+
+
+
+
+
+
+
+
+/*
 @Composable
 fun AddLostItemScreen(
     viewModel: TimeTableViewModel = hiltViewModel(),
@@ -150,6 +1193,18 @@ fun AddLostItemScreen(
             } else {
                 val source = ImageDecoder.createSource(context.contentResolver, it)
                 ImageDecoder.decodeBitmap(source)
+            }
+        }
+    }
+
+
+    val decodedBitmap = remember(userData?.imageUrl) {
+        userData?.imageUrl?.takeIf { it.isNotEmpty() }?.let { base64 ->
+            try {
+                val bytes = Base64.decode(base64, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (e: Exception) {
+                null
             }
         }
     }
@@ -363,6 +1418,10 @@ fun AddLostItemScreen(
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
+
+
+
+
                 // Validation
                 if (title.isBlank()) {
                     Toast.makeText(context, "Please enter a title", Toast.LENGTH_SHORT).show()
@@ -375,9 +1434,14 @@ fun AddLostItemScreen(
                 }
 
 
+
+
+
                 // Submit with user data
                 val userName = userData?.name ?: "Anonymous"
                 val contact = userData?.mobile ?: "911"
+                val userImageBase64 = userData?.imageUrl ?: ""
+
 
                 viewModel.addLostItem(
                      userName,
@@ -385,6 +1449,8 @@ fun AddLostItemScreen(
                    contact ,
                     imageUri,
                     context,
+                    userImageBase64 =userImageBase64
+
 
                 )
                 navController.navigate("Pickme")
@@ -430,3 +1496,5 @@ fun AddLostItemScreen(
         }
     }
 }
+
+ */

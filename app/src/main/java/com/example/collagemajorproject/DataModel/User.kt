@@ -84,6 +84,7 @@ data class LostItem(
     val contactInfo: String = "",
     val id: String = "",
     val imageUrl: String = "",
+    val userImageBase64 : String = ""
 
     // val userId: String = "",
     // val userImage: String = "",

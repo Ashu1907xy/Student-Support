@@ -2,6 +2,8 @@ package com.example.collagemajorproject.Navigation
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
@@ -29,6 +31,7 @@ import com.example.collagemajorproject.Screens.SplashScreen
 import com.example.collagemajorproject.Screens.TimeTable.tabsScreen.TabScreen
 import com.example.collagemajorproject.Screens.TimeTable.tabsScreen.ViewImageScreen
 import com.example.collagemajorproject.Screens.TimeTable.tabsScreen.ViewPdfScreen
+import com.example.collagemajorproject.ViewModel.AuthViewModel.AuthState
 import com.example.collagemajorproject.ViewModel.AuthViewModel.AuthViewModel
 import com.example.collagemajorproject.ViewModel.TimetableViewModel.TimeTableViewModel
 
@@ -40,8 +43,38 @@ fun MyAppNavigation(
     viewModel: TimeTableViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
+    val authState = authViewModel.authState.observeAsState()
 
 
+    LaunchedEffect(authState.value) {
+        when (authState.value) {
+
+            is AuthState.Unauthenticated -> {
+                val currentRoute = navController.currentBackStackEntry?.destination?.route
+                if (currentRoute !in listOf("login", "signup", "splash")) {
+                    navController.navigate("login") {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                    }
+                }
+            }
+
+            is AuthState.Error -> {
+                val error = (authState.value as AuthState.Error).message
+                if (error.contains("disable", ignoreCase = true) ||
+                    error.contains("invalid", ignoreCase = true)
+                ) {
+                    navController.navigate("login") {
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                    }
+                }
+            }
+            else -> {}
+        }
+    }
 
     NavHost(navController = navController, startDestination = "splash", builder = {
 
@@ -171,10 +204,10 @@ fun MyAppNavigation(
 
 
 
-        composable ("Pickme"){
+        composable("Pickme") {
             PickMeScreen(navController = navController)
         }
-        composable ("Addpick"){
+        composable("Addpick") {
             AddLostItemScreen(navController = navController)
         }
 

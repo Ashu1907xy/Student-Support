@@ -16,6 +16,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.collagemajorproject.DataModel.ProfileData
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,6 +34,45 @@ class AuthViewModel : ViewModel() {
 
     init {
         checkAuthStatus()
+        setupAuthStateListener()
+
+    }
+
+
+    private fun setupAuthStateListener(){
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+
+            if (user == null){
+                _authState.value = AuthState.Unauthenticated
+            }else{
+                checkAccountValid()
+            }
+        }
+    }
+
+
+    private fun checkAccountValid(){
+        val user = auth.currentUser
+        user?.reload()?.addOnSuccessListener {
+            if (auth.currentUser != null){
+                _authState.value = AuthState.Authenticated
+            }else{
+                _authState.value = AuthState.Unauthenticated
+            }
+        }?.addOnFailureListener { exception ->
+            when(exception){
+                is FirebaseAuthInvalidCredentialsException -> {
+                    _authState.value = AuthState.Error("Your Account has been Disabled")
+                    signout()
+                }
+
+                else ->
+                    _authState.value = AuthState.Error(
+                        exception.message ?: " Authentication Error "
+                    )
+            }
+        }
     }
 
     fun checkAuthStatus() {
@@ -39,9 +80,45 @@ class AuthViewModel : ViewModel() {
             _authState.value = AuthState.Unauthenticated
 
         } else {
-            _authState.value = AuthState.Authenticated
+           checkAccountValid()
         }
     }
+
+    fun verifyUserOnResume() {
+        viewModelScope.launch {
+            val user = auth.currentUser
+
+            if (user != null) {
+                try {
+                    // Try to get fresh token
+                    user.getIdToken(true)
+                        .addOnSuccessListener {
+                            _authState.value = AuthState.Authenticated
+                        }
+                        .addOnFailureListener { exception ->
+                            when (exception) {
+                                is FirebaseAuthInvalidUserException -> {
+                                    _authState.value = AuthState.Error("Account disabled")
+                                    signout()
+                                }
+                                else -> {
+                                    _authState.value = AuthState.Error(
+                                        exception.message ?: "Verification failed"
+                                    )
+                                }
+                            }
+                        }
+                } catch (e: Exception) {
+                    _authState.value = AuthState.Unauthenticated
+                }
+            } else {
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+    }
+
+
+
 
     fun login(email: String, password: String) {
         if (email.isEmpty() || password.isEmpty()) {

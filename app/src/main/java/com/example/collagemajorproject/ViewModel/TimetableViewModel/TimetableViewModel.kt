@@ -48,9 +48,8 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
     val getAllHandWrittenNotes = _getAllHandWrittenNotesState.asStateFlow()
 
 
-
     private val _getAllMidSemPaperState = MutableStateFlow(MidSemPaperState())
-    val getAllMidSemPaperState  = _getAllMidSemPaperState.asStateFlow()
+    val getAllMidSemPaperState = _getAllMidSemPaperState.asStateFlow()
 
 
     private val _getAllRgpvPaperState = MutableStateFlow(RgpvPaperState())
@@ -67,7 +66,6 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
 
     private val _addPost = MutableStateFlow(AddLostItemState())
     val addPost = _addPost.asStateFlow()
-
 
 
     init {
@@ -173,10 +171,10 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
         }
     }
 
-    fun getAllMidSemPaper(){
+    fun getAllMidSemPaper() {
         viewModelScope.launch(Dispatchers.IO) {
             timetableRepo.getMidSemPaper().collect {
-                when(it){
+                when (it) {
                     is ResultState.Loading -> {
                         _getAllMidSemPaperState.value = MidSemPaperState(
                             isLoading = true
@@ -202,23 +200,24 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
     }
 
 
-    fun getAllRgpvPaper(){
-        viewModelScope.launch (Dispatchers.IO){
+    fun getAllRgpvPaper() {
+        viewModelScope.launch(Dispatchers.IO) {
             timetableRepo.getRgpvPaper().collect {
-                when(it){
+                when (it) {
                     is ResultState.Loading -> {
                         _getAllRgpvPaperState.value = RgpvPaperState(
                             isLoading = true
                         )
                     }
-                    is ResultState.Error ->{
+
+                    is ResultState.Error -> {
                         _getAllRgpvPaperState.value = RgpvPaperState(
                             isLoading = false,
                             error = it.message
                         )
                     }
 
-                    is ResultState.Success ->{
+                    is ResultState.Success -> {
                         _getAllRgpvPaperState.value = RgpvPaperState(
                             isLoading = false,
                             success = it.data
@@ -229,22 +228,24 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
         }
     }
 
-    fun getAllShivani(){
+    fun getAllShivani() {
         viewModelScope.launch(Dispatchers.IO) {
             timetableRepo.getShivani().collect {
-                when(it){
+                when (it) {
                     is ResultState.Loading -> {
                         _getAllShivaniState.value = ShivaniState(
                             isLoading = true
                         )
                     }
+
                     is ResultState.Error -> {
                         _getAllShivaniState.value = ShivaniState(
                             isLoading = false,
                             error = it.message
                         )
                     }
-                    is ResultState.Success ->{
+
+                    is ResultState.Success -> {
                         _getAllShivaniState.value = ShivaniState(
                             isLoading = false,
                             success = it.data
@@ -257,23 +258,24 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
     }
 
 
-    fun getAllLostItems(){
-        viewModelScope.launch (Dispatchers.IO){
+    fun getAllLostItems() {
+        viewModelScope.launch(Dispatchers.IO) {
             timetableRepo.getLostItems().collect {
-                when(it){
+                when (it) {
                     is ResultState.Loading -> {
                         _getAllLostItemsState.value = LostItemState(
                             isLoading = true
                         )
                     }
-                    is ResultState.Error ->{
+
+                    is ResultState.Error -> {
                         _getAllLostItemsState.value = LostItemState(
                             isLoading = false,
                             error = it.message
                         )
                     }
 
-                    is ResultState.Success ->{
+                    is ResultState.Success -> {
                         _getAllLostItemsState.value = LostItemState(
                             isLoading = false,
                             success = it.data
@@ -285,7 +287,17 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
     }
 
 
-    fun addLostItem(userName: String, title: String, contactInfo: String , imageUri: Uri?,context: Context ) {
+    fun addLostItem(
+        userName: String,
+
+        title: String,
+        contactInfo: String,
+        imageUri: Uri?,
+        context: Context,
+        userImageBase64 : String
+
+
+        ) {
         if (imageUri == null) {
             _addPost.value = AddLostItemState(
                 isLoading = false,
@@ -300,6 +312,12 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
                 compressAndEncodeImages(context, uri)
             } ?: ""
 
+            val finalUserImage = userImageBase64.ifEmpty {
+                "" // Default empty string agar user image nahi hai
+            }
+
+
+
 
             // Set loading state
             _addPost.value = AddLostItemState(
@@ -311,6 +329,7 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
                 title = title,
                 contactInfo = contactInfo,
                 imageUrl = base64Image,
+                userImageBase64 = finalUserImage
             )
 
             timetableRepo.addLostItem(item) { success ->
@@ -331,58 +350,56 @@ class TimeTableViewModel @Inject constructor(private val timetableRepo: Timetabl
     }
 
 
-
 }
 
 
 data class TimetableState(
     val isLoading: Boolean = false,
     val success: List<Timetable> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class MidSemState(
     val isLoading: Boolean = false,
     val success: List<Midsem> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class HandWrittenNotesSemState(
     val isLoading: Boolean = false,
     val success: List<HandWrittenNotes> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class MidSemPaperState(
     val isLoading: Boolean = false,
     val success: List<MidPaper> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class RgpvPaperState(
     val isLoading: Boolean = false,
     val success: List<RgpvPaper> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class ShivaniState(
     val isLoading: Boolean = false,
     val success: List<Shivani> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
-
 
 
 data class LostItemState(
     val isLoading: Boolean = false,
     val success: List<LostItem> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 data class AddLostItemState(
     val isLoading: Boolean = false,
     val success: Boolean? = null,
-    val error: String? = null
+    val error: String? = null,
 )
 
 
