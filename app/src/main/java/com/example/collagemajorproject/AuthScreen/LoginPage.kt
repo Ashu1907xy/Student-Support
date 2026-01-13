@@ -79,7 +79,7 @@ fun LoginPage(
 
     Box(
         modifier = Modifier
-           // .fillMaxSize()
+           .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
