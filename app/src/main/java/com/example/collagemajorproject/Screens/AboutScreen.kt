@@ -1,5 +1,6 @@
 package com.example.collagemajorproject.Screens
 
+import android.R.attr.contentDescription
 import android.content.Context
 import android.content.Intent
 import android.graphics.fonts.FontStyle
@@ -68,12 +69,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.room.util.copy
+import com.example.collagemajorproject.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -216,7 +219,7 @@ fun HeroSection() {
 
             // App Name
             Text(
-                text = "CollegeMajorProject",
+                text = "CollegeMajorProject \n Made By Satyam",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -239,7 +242,7 @@ fun HeroSection() {
 
             // Tagline
             Text(
-                text = "Your All-in-One College Companion",
+                text = "Your All-in-One NRI College Companion",
                 style = MaterialTheme.typography.bodyMedium,
             //    fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
@@ -426,7 +429,7 @@ fun DeveloperInfoCard(context: Context) {
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Ashu Gupta",
+                        text = "Satyam kumar Ahirwal",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -437,12 +440,12 @@ fun DeveloperInfoCard(context: Context) {
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "Department: CS-IT / 5th sem",
+                        text = "Department: CSE / 6th sem",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "Roll: 0133CI231059",
+                        text = "Roll: 0115CS231101",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                     )
@@ -459,7 +462,7 @@ fun DeveloperInfoCard(context: Context) {
                 OutlinedButton(
                     onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:ashugupta831911@gmail.com")
+                            data = Uri.parse("mailto:shivamkumarahirwal@gmail.com")
                         }
                         context.startActivity(intent)
                     },
@@ -476,7 +479,7 @@ fun DeveloperInfoCard(context: Context) {
                 OutlinedButton(
                     onClick = {
                         val intent = Intent(Intent.ACTION_DIAL).apply {
-                            data = Uri.parse("tel:8319114934")
+                            data = Uri.parse("tel:6265965188")
                         }
                         context.startActivity(intent)
                     },
@@ -527,9 +530,9 @@ fun CollegeInfoCard() {
                 )
             }
 
-            InfoRow(Icons.Default.AccountBalance, "Developed For", "Sagar Institute Of Research And Technology")
+            InfoRow(Icons.Default.AccountBalance, "Developed For", "NRI Institute Of Research And Technology")
             InfoRow(Icons.Default.LocationOn, "Location", "Bhopal, Madhya Pradesh")
-            InfoRow(Icons.Default.Web, "Website", "https://www.sirtbhopal.ac.in/")
+            InfoRow(Icons.Default.Web, "Website", "https://www.nrigroupindia.com/")
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -668,10 +671,10 @@ fun ContactSection(context: Context) {
             ContactItem(
                 icon = Icons.Default.Email,
                 title = "Email Support",
-                subtitle = "ashugupta831911@gmail.com",
+                subtitle = "shivamkumarahirwal@gmail.com",
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:ashugupta831911@gmail.com")
+                        data = Uri.parse("mailto:shivamkumarahirwal@gmail.com")
                     }
                     context.startActivity(intent)
                 }
@@ -683,7 +686,7 @@ fun ContactSection(context: Context) {
                 subtitle = "+91 8319114934",
                 onClick = {
                     val intent = Intent(Intent.ACTION_DIAL).apply {
-                        data = Uri.parse("tel:8319114934")
+                        data = Uri.parse("tel:6265965188")
                     }
                     context.startActivity(intent)
                 }
@@ -784,7 +787,7 @@ fun SocialMediaSection(uriHandler: UriHandler) {
                     label = "LinkedIn",
                     color = Color(0xFF0A66C2)
                 ) {
-                    uriHandler.openUri("https://www.linkedin.com/in/ashu-gupta-309221289/")
+                    uriHandler.openUri("https://www.linkedin.com/in/satyam-kumar-ahirwal-088103368/")
                 }
 
                 SocialIconButton(
@@ -800,7 +803,7 @@ fun SocialMediaSection(uriHandler: UriHandler) {
                     label = "Instagram",
                     color = Color(0xFFE4405F)
                 ) {
-                    uriHandler.openUri("https://www.instagram.com/the_ashu_world/")
+                    uriHandler.openUri("https://www.instagram.com/killer.__eyes._/?hl=en")
                 }
             }
         }
@@ -919,7 +922,7 @@ fun AcknowledgmentsCard() {
             )
 
             AcknowledgmentItem("Project Guide", "Dr. [Professor Name]", "Guidance & Mentorship")
-            AcknowledgmentItem("Department", "CS-IT", "Technical Support")
+            AcknowledgmentItem("Department", "CSE", "Technical Support")
             AcknowledgmentItem("Beta Testers", "Fellow Students", "Testing & Feedback")
             AcknowledgmentItem("Open Source", "Community", "Libraries & Tools")
         }

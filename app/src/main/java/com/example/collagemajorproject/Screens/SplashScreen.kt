@@ -86,7 +86,7 @@ fun SplashScreen(
         )
         Spacer(modifier = Modifier.height(25.dp))
         Text(
-            text = "@the_ashu_world",
+            text = "Made By Satyam",
             modifier = Modifier
                 .alpha(alpha.value)
                 .background(Color(0xFFF59E0B))
